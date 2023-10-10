@@ -119,5 +119,11 @@ export class MinecraftStack extends Stack {
         taskDefinition,
       }
     );
+
+    minecraftServerContainer.addMountPoints({
+      containerPath: '/data',
+      sourceVolume: "data",
+      readOnly: false,
+    });
   }
 }
