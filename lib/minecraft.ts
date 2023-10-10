@@ -125,5 +125,19 @@ export class MinecraftStack extends Stack {
       sourceVolume: "data",
       readOnly: false,
     });
+
+    const serviceSG = new ec2.SecurityGroup(
+      this,
+      'ServiceSecurityGroup',
+      {
+        vpc,
+        description: 'Security group for task defintion',
+      }
+    );
+
+    serviceSG.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(25565)
+    );
   }
 }
