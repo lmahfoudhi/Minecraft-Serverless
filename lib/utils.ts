@@ -1,7 +1,7 @@
 export const ACTIONS = {
-    ReadWriteData: [
-        'elasticfilesystem:ClientMount',
-        'elasticfilesystem:ClientWrite',
-        'elasticfilesystem:DescribeFileSystems',
-    ]
-}
+  ReadWriteData: [
+    "elasticfilesystem:ClientMount",
+    "elasticfilesystem:ClientWrite",
+    "elasticfilesystem:DescribeFileSystems",
+  ],
+};
