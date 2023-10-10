@@ -153,5 +153,7 @@ export class MinecraftStack extends Stack {
         securityGroups: [serviceSG],
       }
     );
+
+    fs.connections.allowDefaultPortFrom(minecraftServerService.connections);
   }
 }
