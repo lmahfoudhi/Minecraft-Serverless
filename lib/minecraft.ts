@@ -121,23 +121,37 @@ export class MinecraftStack extends Stack {
     );
 
     minecraftServerContainer.addMountPoints({
-      containerPath: '/data',
+      containerPath: "/data",
       sourceVolume: "data",
       readOnly: false,
     });
 
-    const serviceSG = new ec2.SecurityGroup(
-      this,
-      'ServiceSecurityGroup',
-      {
-        vpc,
-        description: 'Security group for task defintion',
-      }
-    );
+    const serviceSG = new ec2.SecurityGroup(this, "ServiceSecurityGroup", {
+      vpc,
+      description: "Security group for task defintion",
+    });
 
-    serviceSG.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(25565)
+    serviceSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(25565));
+
+    const minecraftServerService = new ecs.FargateService(
+      this,
+      "FargateService",
+      {
+        cluster,
+        capacityProviderStrategies: [
+          {
+            capacityProvider: "FARGATE_SPOT",
+            weight: 1,
+            base: 1,
+          },
+        ],
+        taskDefinition: taskDefinition,
+        platformVersion: ecs.FargatePlatformVersion.LATEST,
+        serviceName: "minecraftService",
+        desiredCount: 0,
+        assignPublicIp: true,
+        securityGroups: [serviceSG],
+      }
     );
   }
 }
