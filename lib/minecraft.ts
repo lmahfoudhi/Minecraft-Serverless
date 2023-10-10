@@ -11,7 +11,7 @@ import { ACTIONS } from "./utils";
 export interface minecraftStackProps extends StackProps {}
 
 export class MinecraftStack extends Stack {
-  constructor(scope: Construct, id: string, props: minecraftStackProps) {
+  constructor(scope: Construct, id: string, props?: minecraftStackProps) {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, "minecraftVPC", {
@@ -34,7 +34,6 @@ export class MinecraftStack extends Stack {
 
     const fs = new efs.FileSystem(this, "minecraftFS", {
       vpc,
-      removalPolicy: RemovalPolicy.SNAPSHOT,
     });
 
     const accessPoint = fs.addAccessPoint("AccessPoint", {
@@ -101,9 +100,8 @@ export class MinecraftStack extends Stack {
       }
     );
 
-    const minecraftServerContainer = new ecs.ContainerDefinition(
-      this,
-      "ServerContainer",
+    const minecraftServerContainer = taskDefinition.addContainer(
+      "minecraftContainer",
       {
         containerName: "Minecraft",
         image: ecs.ContainerImage.fromRegistry("itzg/minecraft-server"),
@@ -116,10 +114,8 @@ export class MinecraftStack extends Stack {
         ],
         environment: { EULA: "TRUE" },
         essential: false,
-        taskDefinition,
       }
     );
-
     minecraftServerContainer.addMountPoints({
       containerPath: "/data",
       sourceVolume: "data",
@@ -148,7 +144,7 @@ export class MinecraftStack extends Stack {
         taskDefinition: taskDefinition,
         platformVersion: ecs.FargatePlatformVersion.LATEST,
         serviceName: "minecraftService",
-        desiredCount: 0,
+        desiredCount: 1,
         assignPublicIp: true,
         securityGroups: [serviceSG],
       }
