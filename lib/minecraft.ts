@@ -1,4 +1,4 @@
-import { Stack, StackProps, RemovalPolicy } from "aws-cdk-lib";
+import { Stack, StackProps, RemovalPolicy,  Arn,ArnFormat } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -106,14 +106,13 @@ export class MinecraftStack extends Stack {
         containerName: "Minecraft",
         image: ecs.ContainerImage.fromRegistry("itzg/minecraft-server"),
         portMappings: [
-          {
+          { 
             containerPort: 25565,
             hostPort: 25565,
             protocol: ecs.Protocol.TCP,
           },
         ],
         environment: { EULA: "TRUE" },
-        essential: false,
       }
     );
     minecraftServerContainer.addMountPoints({
@@ -151,5 +150,35 @@ export class MinecraftStack extends Stack {
     );
 
     fs.connections.allowDefaultPortFrom(minecraftServerService.connections);
+
+    const serviceControlPolicy = new iam.Policy(this, 'ServiceControlPolicy', {
+      statements: [
+        new iam.PolicyStatement({
+          sid: 'AllowAllOnServiceAndTask',
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:*'],
+          resources: [
+            minecraftServerService.serviceArn,
+            /* arn:aws:ecs:<region>:<account_number>:task/minecraft/* */
+            Arn.format(
+              {
+                service: 'ecs',
+                resource: 'task',
+                resourceName: `Minecraft/*`,
+                arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+              },
+              this
+            ),
+          ],
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ec2:DescribeNetworkInterfaces'],
+          resources: ['*'],
+        }),
+      ],
+    });
+
+    serviceControlPolicy.attachToRole(taskRole);
   }
 }
