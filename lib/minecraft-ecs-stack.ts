@@ -29,7 +29,6 @@ export interface minecraftEcsStackProps extends StackProps {
   minecraftImage: string;
   watchdogImage: string;
   hostedZoneIdKey: string;
-  domain: string;
   subdomain: string;
 }
 
@@ -43,7 +42,6 @@ export class MinecraftEcsStack extends Stack {
       watchdogImage,
       hostedZoneIdKey,
       domain,
-      subdomain,
     } = props;
 
 /*
@@ -164,7 +162,7 @@ export class MinecraftEcsStack extends Stack {
         CLUSTER: clusterName,
         SERVICE: serviceName,
         DNSZONE: hostedZoneId,
-        SERVERNAME: `${subdomain}.${domain}`,
+        SERVERNAME: subdomain,
       },
       essential: true,
     });

@@ -10,10 +10,17 @@ import { ACTIONS } from "./utils";
 export interface dnsTriggerStackProps extends StackProps {}
 
 export class DnsTriggerStack extends Stack {
-  constructor(scope: Construct, id: string, props?: domainStackProps) {
+  constructor(scope: Construct, id: string, props?: dnsTriggerStackProps) {
     super(scope, id, props);
-    const subdomain = `minecraft.server.com`;
+    
+    const rootHostedZone = HostedZone.fromLookup(this, "HostedZone", {
+      domainName: "server.com",
+    });
 
+    const subdomainHostedZone = new HostedZone(this, "SubdomainHostedZone", {
+      zoneName: subdomain,
+      queryLogsLogGroupArn: queryLogGroup.logGroupArn,
+    });
     const queryLogGroup = new LogGroup(this, "LogGroup", {
       logGroupName: `/aws/route53/${subdomain}`,
       retention: RetentionDays.THREE_DAYS,
@@ -28,13 +35,6 @@ export class DnsTriggerStack extends Stack {
       })
     );
 
-    const rootHostedZone = HostedZone.fromLookup(this, "HostedZone", {
-      domainName: "server.com",
-    });
-
-    const subdomainHostedZone = new HostedZone(this, "SubdomainHostedZone", {
-      zoneName: subdomain,
-      queryLogsLogGroupArn: queryLogGroup.logGroupArn,
-    });
+    
   }
 }

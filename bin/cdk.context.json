@@ -1,9 +1,10 @@
 {
     "domain":"leith-mahfoudhi.me",
-    "subdomain":"minecraft.leith-mahfoudhi.me",
+    "subdomain":"minecraft",
     "minecraftRegion":"eu-west-2",
     "clusterName":"Minecraft",
     "serviceName":"minecraftService",
     "minecraftImage": "itzg/minecraft-server",
-    "watchdogImage":"doctorray/minecraft-ecsfargate-watchdog"
+    "watchdogImage":"doctorray/minecraft-ecsfargate-watchdog",
+    "hostedZoneIdKey":"hostedZone"
 }
