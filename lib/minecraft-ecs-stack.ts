@@ -1,38 +1,42 @@
 import { Stack, StackProps,Arn,ArnFormat } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as efs from "aws-cdk-lib/aws-efs";
+import {Vpc, SubnetType, SecurityGroup, Peer, Port}  from "aws-cdk-lib/aws-ec2";
+import { FileSystem } from "aws-cdk-lib/aws-efs";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as ecs from "aws-cdk-lib/aws-ecs";
-import { aws_route53 as route53 } from 'aws-cdk-lib';
+import { Cluster, FargateTaskDefinition,ContainerImage,Protocol,FargateService,FargatePlatformVersion } from "aws-cdk-lib/aws-ecs";
 import { ACTIONS } from "./utils";
 
-export interface minecraftEcsStackProps extends StackProps {}
+export interface minecraftEcsStackProps extends StackProps {
+  clusterName: string,
+  serviceName: string,
+  minecraftImage: string,
+  watchdogImage: string
+}
 
 export class MinecraftEcsStack extends Stack {
   constructor(scope: Construct, id: string, props?: minecraftEcsStackProps) {
     super(scope, id, props);
+    const {clusterName,serviceName,minecraftImage,watchdogImage} = props
 
-    const vpc = new ec2.Vpc(this, "minecraftVPC", {
-      vpcName: "Minecraft-VPC",
+    const vpc = new Vpc(this, "minecraftVPC", {
       natGateways: 0,
       maxAzs: 2,
       subnetConfiguration: [
         {
           cidrMask: 28,
           name: "AZ1",
-          subnetType: ec2.SubnetType.PUBLIC,
+          subnetType: SubnetType.PUBLIC,
         },
         {
           cidrMask: 28,
           name: "AZ2",
-          subnetType: ec2.SubnetType.PUBLIC,
+          subnetType: SubnetType.PUBLIC,
         },
       ],
     });
 
-    const fs = new efs.FileSystem(this, "minecraftFS", {
+    const fs = new FileSystem(this, "minecraftFS", {
       vpc,
     });
 
@@ -49,8 +53,8 @@ export class MinecraftEcsStack extends Stack {
       },
     });
 
-    const cluster = new ecs.Cluster(this, "minecraftCluster", {
-      clusterName: "Minecraft",
+    const cluster = new Cluster(this, "minecraftCluster", {
+      clusterName: clusterName,
       vpc,
       enableFargateCapacityProviders: true,
     });
@@ -59,7 +63,7 @@ export class MinecraftEcsStack extends Stack {
       statements: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [...ACTIONS.ReadWriteData],
+          actions: [...ACTIONS.ReadWriteDataFs],
           resources: [fs.fileSystemArn],
           conditions: {
             StringEquals: {
@@ -77,7 +81,7 @@ export class MinecraftEcsStack extends Stack {
 
     efsReadWritePermission.attachToRole(taskRole);
 
-    const taskDefinition = new ecs.FargateTaskDefinition(
+    const taskDefinition = new FargateTaskDefinition(
       this,
       "TaskDefinition",
       {
@@ -104,12 +108,12 @@ export class MinecraftEcsStack extends Stack {
       "minecraftContainer",
       {
         containerName: "Minecraft",
-        image: ecs.ContainerImage.fromRegistry("itzg/minecraft-server"),
+        image: ContainerImage.fromRegistry(minecraftImage),
         portMappings: [
           { 
             containerPort: 25565,
             hostPort: 25565,
-            protocol: ecs.Protocol.TCP,
+            protocol: Protocol.TCP,
           },
         ],
         environment: { EULA: "TRUE" },
@@ -121,14 +125,16 @@ export class MinecraftEcsStack extends Stack {
       readOnly: false,
     });
 
-    const serviceSG = new ec2.SecurityGroup(this, "ServiceSecurityGroup", {
+    
+
+    const serviceSG = new SecurityGroup(this, "ServiceSecurityGroup", {
       vpc,
       description: "Security group for task defintion",
     });
 
-    serviceSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(25565));
+    serviceSG.addIngressRule(Peer.anyIpv4(), Port.tcp(25565));
 
-    const minecraftServerService = new ecs.FargateService(
+    const minecraftServerService = new FargateService(
       this,
       "FargateService",
       {
@@ -141,9 +147,9 @@ export class MinecraftEcsStack extends Stack {
           },
         ],
         taskDefinition: taskDefinition,
-        platformVersion: ecs.FargatePlatformVersion.LATEST,
+        platformVersion: FargatePlatformVersion.LATEST,
         serviceName: "minecraftService",
-        desiredCount: 1,
+        desiredCount: 0,
         assignPublicIp: true,
         securityGroups: [serviceSG],
       }
@@ -156,15 +162,14 @@ export class MinecraftEcsStack extends Stack {
         new iam.PolicyStatement({
           sid: 'AllowAllOnServiceAndTask',
           effect: iam.Effect.ALLOW,
-          actions: ['ecs:*'],
+          actions: [...ACTIONS.AllowAllOnServiceAndTask],
           resources: [
             minecraftServerService.serviceArn,
-            /* arn:aws:ecs:<region>:<account_number>:task/minecraft/* */
             Arn.format(
               {
                 service: 'ecs',
                 resource: 'task',
-                resourceName: `Minecraft/*`,
+                resourceName: `${clusterName}/*`,
                 arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
               },
               this
@@ -173,7 +178,7 @@ export class MinecraftEcsStack extends Stack {
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: ['ec2:DescribeNetworkInterfaces'],
+          actions: [...ACTIONS.AllowGetIP],
           resources: ['*'],
         }),
       ],
