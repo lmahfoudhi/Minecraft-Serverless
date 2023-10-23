@@ -5,5 +5,5 @@
     "clusterName":"Minecraft",
     "serviceName":"minecraftService",
     "minecraftImage": "itzg/minecraft-server",
-    "watchdogImage":""
+    "watchdogImage":"doctorray/minecraft-ecsfargate-watchdog"
 }
