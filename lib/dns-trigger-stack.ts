@@ -66,5 +66,17 @@ export class DnsTriggerStack extends Stack {
       recordName: subdomain,
       zone: subdomainHostedZone,
     });
+
+    const launcherLambda = new lambda.Function(this, 'LauncherLambda', {
+      code: lambda.Code.fromAsset(path.resolve(__dirname, '../../lambda')),
+      handler: 'lambda_function.lambda_handler',
+      runtime: lambda.Runtime.PYTHON_3_8,
+      environment: {
+        REGION: config.serverRegion,
+        CLUSTER: constants.CLUSTER_NAME,
+        SERVICE: constants.SERVICE_NAME,
+      },
+      logRetention: logs.RetentionDays.THREE_DAYS, // TODO: parameterize
+    });
   }
 }
